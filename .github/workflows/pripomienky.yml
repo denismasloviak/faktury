@@ -1,0 +1,22 @@
+name: Pripomienky faktúr
+
+on:
+  schedule:
+    # 6:00 UTC ~ 7:00/8:00 ráno na Slovensku (podľa letného/zimného času)
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}   # umožní spustiť ručne cez Actions → Run workflow (na test)
+
+jobs:
+  posli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node .github/scripts/check-and-notify.mjs
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}

@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<title>Faktúry</title>
+<style>
+:root{
+  --bg:#0d0f12; --card:#16191e; --card2:#1c2027; --tx:#eef0f3; --dim:#8b93a1;
+  --line:#262b33; --acc:#5aa9ff; --ok:#3fbf6a; --err:#e8586b; --warn:#e0a83f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) 40px env(safe-area-inset-left);}
+.wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:.2px}
+.sub{color:var(--dim);font-size:13px;margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1;min-width:120px}
+label{display:block;font-size:12px;color:var(--dim);margin:0 0 5px}
+input,textarea{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--tx);
+  border-radius:9px;padding:10px 11px;font-size:15px;font-family:inherit;outline:none}
+input:focus,textarea:focus{border-color:var(--acc)}
+textarea{resize:vertical;min-height:44px}
+.btn{background:var(--acc);color:#06111f;border:none;border-radius:9px;padding:11px 16px;
+  font-size:14px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--err);border:1px solid var(--err)}
+.btn:disabled{opacity:.5;cursor:default}
+.field{margin-bottom:12px}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.bill{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line)}
+.bill:last-child{border-bottom:none}
+.bill .day{width:44px;height:44px;flex:0 0 auto;border-radius:10px;background:var(--card2);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:var(--acc)}
+.bill .info{flex:1;min-width:0}
+.bill .name{font-weight:600}
+.bill .meta{color:var(--dim);font-size:12.5px;margin-top:2px}
+.bill .op{display:flex;gap:6px}
+.iconbtn{background:none;border:none;color:var(--dim);cursor:pointer;padding:6px;border-radius:7px}
+.iconbtn:hover{background:var(--card2);color:var(--tx)}
+.empty{color:var(--dim);text-align:center;padding:26px 10px;font-size:14px}
+.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:0 0 10px}
+.sync-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.sync-dot.ok{background:var(--ok)} .sync-dot.busy{background:var(--warn)} .sync-dot.err{background:var(--err)}
+.sync-txt{font-size:12px;color:var(--dim)}
+.gear{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;padding:6px}
+.hint{color:var(--dim);font-size:12.5px;margin:8px 0 0}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:#1c2027;border:1px solid var(--line);color:var(--tx);padding:10px 16px;border-radius:10px;
+  font-size:13px;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;
+  padding:20px;z-index:50}
+.overlay.on{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:420px;width:100%}
+.modal h2{margin:0 0 6px;font-size:18px}
+.modal p{color:var(--dim);font-size:13.5px;margin:0 0 16px}
+.modal ol{color:var(--dim);font-size:13px;padding-left:18px;margin:0 0 14px}
+.modal ol b{color:var(--tx)}
+.msg{font-size:13px;min-height:18px;margin-top:10px}
+.msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sync-bar">
+    <span class="sync-dot" id="syncDot"></span>
+    <span class="sync-txt" id="syncTxt">—</span>
+    <button class="gear" id="gearBtn" title="Sync nastavenia">⚙</button>
+  </div>
+
+  <h1>Faktúry</h1>
+  <p class="sub">Opakujúce sa platby, s mailovým upozornením vopred.</p>
+
+  <div class="card">
+    <p class="section-title" id="formTitle">Nová faktúra</p>
+    <div class="field">
+      <label>Názov (napr. Elektrina, Nájom, Telefón)</label>
+      <input id="fName" placeholder="Názov platby">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Deň v mesiaci (1–31)</label>
+        <input id="fDay" type="number" min="1" max="31" placeholder="12">
+      </div>
+      <div class="field">
+        <label>Upozorniť koľko dní vopred</label>
+        <input id="fBefore" type="number" min="0" max="27" placeholder="2">
+      </div>
+    </div>
+    <div class="field">
+      <label>Poznámka (voliteľné — suma, číslo účtu...)</label>
+      <textarea id="fNote" placeholder="napr. cca 45 €"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn" id="fSave">Uložiť</button>
+      <button class="btn ghost" id="fCancel" style="display:none">Zrušiť úpravu</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Zoznam</p>
+    <div id="list"></div>
+  </div>
+
+  <p class="hint">Maily posiela raz denne GitHub Action podľa tohto zoznamu. Zmena sa prejaví do 24 hod.</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ONBOARDING -->
+<div class="overlay" id="onb">
+  <div class="modal">
+    <h2 id="onbTitle">Pripoj sync</h2>
+    <p id="onbLead">Vlož token a odteraz sa zoznam faktúr sám prenáša medzi zariadeniami — a GitHub Action z neho vie posielať maily.</p>
+    <ol>
+      <li>github.com → <b>Settings</b> → dole <b>Developer settings</b></li>
+      <li><b>Personal access tokens → Tokens (classic)</b> → Generate new token</li>
+      <li>Zaškrtni <b>gist</b> — bez toho to nepôjde</li>
+      <li>Skopíruj ho sem ↓</li>
+    </ol>
+    <input id="onbTok" type="password" placeholder="ghp_...">
+    <div class="msg" id="onbMsg"></div>
+    <div class="actions">
+      <button class="btn" id="onbGo">Pripojiť</button>
+      <button class="btn ghost" id="onbSkip">Zatiaľ nie</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC SETTINGS -->
+<div class="overlay" id="gset">
+  <div class="modal">
+    <h2>Sync</h2>
+    <p>Token sa ukladá len v tomto prehliadači. Dáta sú v privátnom Gist-e (súbor <code>faktury.json</code>).</p>
+    <div class="field">
+      <label>GitHub token (scope: gist)</label>
+      <input id="gToken" type="password" placeholder="ghp_...">
+    </div>
+    <div class="msg" id="gStat"></div>
+    <div class="actions">
+      <button class="btn" id="gSave">Uložiť token</button>
+      <button class="btn ghost" id="gVerify">Overiť</button>
+      <button class="btn ghost" id="gPull">↓ Stiahnuť</button>
+      <button class="btn ghost" id="gPush">↑ Nahrať</button>
+      <button class="btn ghost" id="gClose">Zavrieť</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='faktury_v1';
+const DEFAULTS={ v:1, updatedAt:0, bills:[], sync:{gistId:'',token:'',skipped:false} };
+let D=load(), editingId=null;
+
+function load(){
+  try{ const raw=localStorage.getItem(KEY); if(!raw) return structuredClone(DEFAULTS);
+    return Object.assign(structuredClone(DEFAULTS),JSON.parse(raw)); }
+  catch(e){ return structuredClone(DEFAULTS); }
+}
+function save(push=true){ D.updatedAt=Date.now(); localStorage.setItem(KEY,JSON.stringify(D)); if(push) schedulePush(); }
+function saveLocal(){ localStorage.setItem(KEY,JSON.stringify(D)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let tT;
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('on'),1700); }
+
+/* ---------- render ---------- */
+function render(){
+  const list=$('#list');
+  const bills=[...D.bills].sort((a,b)=>a.day-b.day);
+  if(!bills.length){ list.innerHTML='<div class="empty">Zatiaľ žiadna faktúra. Pridaj prvú vyššie ↑</div>'; return; }
+  list.innerHTML=bills.map(b=>`
+    <div class="bill" data-id="${b.id}">
+      <div class="day">${b.day}.</div>
+      <div class="info">
+        <div class="name">${esc(b.name)}</div>
+        <div class="meta">upozornenie ${b.before} ${dniSlovo(b.before)} vopred${b.note?' · '+esc(b.note):''}</div>
+      </div>
+      <div class="op">
+        <button class="iconbtn" data-act="edit" title="Upraviť">✎</button>
+        <button class="iconbtn" data-act="del" title="Zmazať">✕</button>
+      </div>
+    </div>`).join('');
+}
+function dniSlovo(n){ n=+n; if(n===1) return 'deň'; if(n>=2&&n<=4) return 'dni'; return 'dní'; }
+
+$('#list').addEventListener('click',e=>{
+  const row=e.target.closest('.bill'); if(!row) return;
+  const id=row.dataset.id, act=e.target.dataset.act;
+  if(act==='del'){
+    if(!confirm('Zmazať túto faktúru?')) return;
+    D.bills=D.bills.filter(b=>b.id!==id); save(); render();
+  }
+  if(act==='edit'){
+    const b=D.bills.find(x=>x.id===id); if(!b) return;
+    editingId=id;
+    $('#fName').value=b.name; $('#fDay').value=b.day; $('#fBefore').value=b.before; $('#fNote').value=b.note||'';
+    $('#formTitle').textContent='Upraviť faktúru';
+    $('#fCancel').style.display='inline-block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+});
+
+$('#fCancel').onclick=()=>{
+  editingId=null;
+  $('#fName').value=''; $('#fDay').value=''; $('#fBefore').value=''; $('#fNote').value='';
+  $('#formTitle').textContent='Nová faktúra';
+  $('#fCancel').style.display='none';
+};
+
+$('#fSave').onclick=()=>{
+  const name=$('#fName').value.trim();
+  const day=Math.round(+$('#fDay').value);
+  const before=Math.round(+$('#fBefore').value);
+  const note=$('#fNote').value.trim();
+  if(!name){ toast('Vlož názov'); return; }
+  if(!(day>=1&&day<=31)){ toast('Deň má byť 1–31'); return; }
+  if(!(before>=0&&before<=27)){ toast('Upozornenie 0–27 dní'); return; }
+  if(editingId){
+    const b=D.bills.find(x=>x.id===editingId);
+    Object.assign(b,{name,day,before,note});
+  }else{
+    D.bills.push({id:uid(),name,day,before,note});
+  }
+  save(); render(); $('#fCancel').onclick();
+  toast('Uložené');
+};
+
+/* ============================================================
+   GIST SYNC — rovnaký princíp ako v HQ, súbor faktury.json
+   ============================================================ */
+let pT, syncing=false;
+function dot(c){ $('#syncDot').className='sync-dot '+(c||''); }
+function syncTxt(m){ $('#syncTxt').textContent=m; }
+function schedulePush(){ if(!D.sync.token) return; clearTimeout(pT); pT=setTimeout(()=>push(),2000); }
+function stat(m){ const e=$('#gStat'); if(e) e.textContent=m; }
+function errMsg(s){
+  if(s==='nofile') return 'Tento Gist neobsahuje faktury.json.';
+  if(s===401) return 'Neplatný token (401)';
+  if(s===403) return 'Token nemá právo gist (403)';
+  if(s===404) return 'Gist ID sa nenašlo (404)';
+  return 'Chyba '+s;
+}
+function cas(){ return new Date().toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'}); }
+
+async function ensureGist(){
+  if(D.sync.gistId) return true;
+  const r=await api('https://api.github.com/gists?per_page=100&t='+Date.now());
+  if(!r.ok) throw new Error(String(r.status));
+  const hit=(await r.json()).find(g=>g.files&&g.files['faktury.json']);
+  if(hit){ D.sync.gistId=hit.id; saveLocal(); return true; }
+  return false;
+}
+async function api(url,opt={}){
+  return fetch(url,{...opt,headers:{Authorization:'Bearer '+D.sync.token,Accept:'application/vnd.github+json',...(opt.headers||{})}});
+}
+async function push(loud=false){
+  if(!D.sync.token){ if(loud){ toast('Chýba token'); stat('Chýba token.'); } return; }
+  if(syncing) return;
+  syncing=true; dot('busy'); syncTxt('sync…');
+  try{
+    const {sync:_x, ...naGist}=D;
+    const body={description:'Faktúry data',files:{'faktury.json':{content:JSON.stringify(naGist)}}};
+    let r;
+    await ensureGist();
+    if(D.sync.gistId) r=await api('https://api.github.com/gists/'+D.sync.gistId,{method:'PATCH',body:JSON.stringify(body)});
+    else r=await api('https://api.github.com/gists',{method:'POST',body:JSON.stringify({...body,public:false})});
+    if(!r.ok) throw new Error(r.status);
+    const j=await r.json();
+    if(!D.sync.gistId) D.sync.gistId=j.id;
+    saveLocal(); dot('ok'); syncTxt('sync ✓ '+cas());
+    if(loud){ toast('Nahraté ↑'); stat('Nahraté o '+cas()+'. Gist ID: '+D.sync.gistId); }
+  }catch(e){
+    dot('err'); syncTxt('chyba syncu');
+    if(loud){ toast('Nahrávanie zlyhalo'); stat(errMsg(isNaN(+e.message)?e.message:+e.message)); }
+  }
+  syncing=false;
+}
+async function pull(loud=false,force=false){
+  if(!D.sync.token){ if(loud){ toast('Chýba token'); stat('Vlož token a daj Uložiť token.'); } return; }
+  dot('busy'); syncTxt('sync…');
+  try{
+    if(!await ensureGist()){
+      if(loud){ toast('Zatiaľ niet čo stiahnuť'); stat('Na tomto účte ešte nie sú dáta.'); }
+      dot('ok'); syncTxt('—'); return;
+    }
+    const r=await api('https://api.github.com/gists/'+D.sync.gistId+'?t='+Date.now());
+    if(!r.ok) throw new Error(r.status);
+    const j=await r.json();
+    const f=j.files&&j.files['faktury.json'];
+    if(!f) throw new Error('nofile');
+    const rem=JSON.parse(f.truncated ? await (await fetch(f.raw_url)).text() : f.content);
+    if(force || (rem.updatedAt||0)>(D.updatedAt||0)){
+      const s=D.sync;
+      D=Object.assign(structuredClone(DEFAULTS),rem);
+      D.sync=s; saveLocal(); render();
+      if(loud){ toast('Stiahnuté ↓'); stat('Stiahnuté o '+cas()+' — '+D.bills.length+' faktúr.'); }
+    }else if(loud){ toast('Už máš najnovšie'); stat('Bez zmeny.'); }
+    dot('ok'); syncTxt('sync ✓ '+cas());
+  }catch(e){
+    dot('err'); syncTxt('chyba syncu');
+    if(e.message==='401'){ tokenNeplatny(); return; }
+    if(loud){ toast('Sťahovanie zlyhalo'); stat(errMsg(isNaN(+e.message)?e.message:+e.message)); }
+  }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pull(); });
+
+/* ---------- gear settings modal ---------- */
+$('#gearBtn').onclick=()=>{ $('#gToken').value=D.sync.token||''; $('#gset').classList.add('on'); };
+$('#gClose').onclick=()=>$('#gset').classList.remove('on');
+$('#gSave').onclick=()=>{ D.sync.token=$('#gToken').value.trim(); saveLocal(); if(D.sync.token) localStorage.setItem('gh_token_faktury',D.sync.token); stat('Uložené.'); };
+$('#gVerify').onclick=async()=>{
+  const t=$('#gToken').value.trim(); if(!t){ stat('Pole s tokenom je prázdne.'); return; }
+  stat('Overujem…');
+  try{
+    const r=await fetch('https://api.github.com/gists?per_page=100',{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
+    const scopes=r.headers.get('x-oauth-scopes')||'';
+    if(!r.ok){ stat('Token neplatný ('+r.status+')'); return; }
+    if(!/(^|,\s*)gist(\s*,|$)/.test(scopes)){ stat('Tokenu chýba oprávnenie gist (má: '+scopes+')'); return; }
+    stat('Token funguje, oprávnenie gist ✓');
+  }catch(e){ stat('Nepodarilo sa spojiť: '+e.message); }
+};
+$('#gPull').onclick=()=>pull(true);
+$('#gPush').onclick=()=>push(true);
+
+/* ---------- onboarding ---------- */
+function onbShow(titulok,sprava){
+  $('#onb').classList.add('on');
+  if(titulok) $('#onbTitle').textContent=titulok;
+  if(sprava){ const m=$('#onbMsg'); m.textContent=sprava; m.className='msg err'; }
+}
+function onbHide(){ $('#onb').classList.remove('on'); }
+$('#onbSkip').onclick=()=>{ D.sync.skipped=true; saveLocal(); onbHide(); };
+$('#onbTok').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#onbGo').click(); });
+$('#onbGo').onclick=async()=>{
+  const t=$('#onbTok').value.trim(), m=$('#onbMsg'), b=$('#onbGo');
+  const say=(txt,cls)=>{ m.textContent=txt; m.className='msg '+(cls||''); };
+  if(!t){ say('Vlož token.','err'); return; }
+  if(t.startsWith('github_pat_')){ say('Toto je fine-grained token. Treba typ classic.','err'); return; }
+  b.disabled=true; say('Overujem…');
+  try{
+    const r=await fetch('https://api.github.com/gists?per_page=100',{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
+    if(r.status===401){ say('GitHub token neprijal. Skontroluj, či si skopíroval celý.','err'); b.disabled=false; return; }
+    if(!r.ok){ say(errMsg(r.status),'err'); b.disabled=false; return; }
+    const scopes=(r.headers.get('x-oauth-scopes')||'').trim();
+    if(!/(^|,\s*)gist(\s*,|$)/.test(scopes)){
+      say('Tokenu chýba oprávnenie gist'+(scopes?(' (má len: '+scopes+')'):'')+'. Zaškrtni gist a daj Update token.','err');
+      b.disabled=false; return;
+    }
+    D.sync.token=t; D.sync.skipped=false;
+    localStorage.setItem('gh_token_faktury',t); saveLocal();
+    const hit=(await r.json()).find(g=>g.files&&g.files['faktury.json']);
+    if(hit){ D.sync.gistId=hit.id; saveLocal(); await pull(false,true); say('Pripojené — stiahnutých '+D.bills.length+' faktúr.','ok'); }
+    else{ await push(false); say('Pripojené — úložisko vytvorené.','ok'); }
+    setTimeout(onbHide,900);
+  }catch(e){ say('Nepodarilo sa spojiť s GitHubom: '+e.message,'err'); b.disabled=false; }
+};
+function tokenNeplatny(){
+  if($('#onb').classList.contains('on')) return;
+  D.sync.token=''; saveLocal();
+  onbShow('Token prestal platiť','Vlož nový — asi mu vypršala platnosť alebo bol zrušený.');
+}
+
+/* ---------- štart ---------- */
+render();
+if(D.sync.token){ pull(); }
+else if(!D.sync.skipped){ onbShow(); }
+</script>
+</body>
+</html>

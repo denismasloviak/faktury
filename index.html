@@ -4,27 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d0f12">
-<title>Faktúry</title>
+<title>Faktúry a úlohy</title>
 <style>
 :root{
   --bg:#0d0f12; --card:#16191e; --card2:#1c2027; --tx:#eef0f3; --dim:#8b93a1;
-  --line:#262b33; --acc:#5aa9ff; --ok:#3fbf6a; --err:#e8586b; --warn:#e0a83f;
+  --line:#262b33; --ok:#3fbf6a; --err:#e8586b; --warn:#e0a83f;
+  --acc:#5aa9ff;         /* úlohy */
+  --firma:#e0a83f;       /* faktúry firemné */
+  --sukromne:#5aa9ff;    /* faktúry súkromné */
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
   font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;}
 body{padding:env(safe-area-inset-top) env(safe-area-inset-right) 40px env(safe-area-inset-left);}
-.wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
 h1{font-size:22px;margin:0 0 4px;letter-spacing:.2px}
-.sub{color:var(--dim);font-size:13px;margin:0 0 24px}
+.sub{color:var(--dim);font-size:13px;margin:0 0 22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
-.row>*{flex:1;min-width:120px}
+.row>*{flex:1;min-width:110px}
 label{display:block;font-size:12px;color:var(--dim);margin:0 0 5px}
-input,textarea{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--tx);
-  border-radius:9px;padding:10px 11px;font-size:15px;font-family:inherit;outline:none}
-input:focus,textarea:focus{border-color:var(--acc)}
+input,textarea,select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--tx);
+  border-radius:9px;padding:10px 11px;font-size:15px;font-family:inherit;outline:none;appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--acc)}
 textarea{resize:vertical;min-height:44px}
 .btn{background:var(--acc);color:#06111f;border:none;border-radius:9px;padding:11px 16px;
   font-size:14px;font-weight:600;cursor:pointer}
@@ -33,17 +36,7 @@ textarea{resize:vertical;min-height:44px}
 .btn:disabled{opacity:.5;cursor:default}
 .field{margin-bottom:12px}
 .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-.bill{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line)}
-.bill:last-child{border-bottom:none}
-.bill .day{width:44px;height:44px;flex:0 0 auto;border-radius:10px;background:var(--card2);
-  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:var(--acc)}
-.bill .info{flex:1;min-width:0}
-.bill .name{font-weight:600}
-.bill .meta{color:var(--dim);font-size:12.5px;margin-top:2px}
-.bill .op{display:flex;gap:6px}
-.iconbtn{background:none;border:none;color:var(--dim);cursor:pointer;padding:6px;border-radius:7px}
-.iconbtn:hover{background:var(--card2);color:var(--tx)}
-.empty{color:var(--dim);text-align:center;padding:26px 10px;font-size:14px}
+.empty{color:var(--dim);text-align:center;padding:22px 10px;font-size:13.5px}
 .section-title{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:0 0 10px}
 .sync-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
@@ -66,6 +59,55 @@ textarea{resize:vertical;min-height:44px}
 .msg{font-size:13px;min-height:18px;margin-top:10px}
 .msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
 a{color:var(--acc)}
+
+/* ---------- dve kolóny: faktúry (úzko) / úlohy (široko) ---------- */
+.board{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}
+@media (max-width:820px){ .board{grid-template-columns:1fr} }
+
+/* ---------- faktúry ---------- */
+.typebar{display:flex;gap:8px;margin-bottom:12px}
+.typebtn{flex:1;text-align:center;padding:8px 6px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card2);color:var(--dim);font-size:12.5px;font-weight:600;cursor:pointer;user-select:none}
+.typebtn[data-type="firma"].on{background:color-mix(in srgb,var(--firma) 22%,var(--card2));color:var(--firma);border-color:var(--firma)}
+.typebtn[data-type="sukromne"].on{background:color-mix(in srgb,var(--sukromne) 22%,var(--card2));color:var(--sukromne);border-color:var(--sukromne)}
+.filterbar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.chip{padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card2);
+  color:var(--dim);font-size:11.5px;font-weight:600;cursor:pointer}
+.chip.on{color:var(--tx);border-color:var(--tx)}
+.chip[data-f="firma"].on{color:var(--firma);border-color:var(--firma)}
+.chip[data-f="sukromne"].on{color:var(--sukromne);border-color:var(--sukromne)}
+.bill{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);
+  border-left:3px solid transparent;padding-left:8px}
+.bill:last-child{border-bottom:none}
+.bill[data-type="firma"]{border-left-color:var(--firma)}
+.bill[data-type="sukromne"]{border-left-color:var(--sukromne)}
+.bill .day{width:36px;height:36px;flex:0 0 auto;border-radius:9px;background:var(--card2);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.bill[data-type="firma"] .day{color:var(--firma)}
+.bill[data-type="sukromne"] .day{color:var(--sukromne)}
+.bill .info{flex:1;min-width:0}
+.bill .name{font-weight:600;font-size:13.5px}
+.bill .meta{color:var(--dim);font-size:11.5px;margin-top:2px}
+.bill .op{display:flex;gap:2px}
+.iconbtn{background:none;border:none;color:var(--dim);cursor:pointer;padding:5px;border-radius:7px}
+.iconbtn:hover{background:var(--card2);color:var(--tx)}
+
+/* ---------- úlohy ---------- */
+.task{display:flex;align-items:flex-start;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:none}
+.task.done .txt{color:var(--dim);text-decoration:line-through}
+.chk{width:22px;height:22px;flex:0 0 auto;border-radius:7px;border:1.5px solid var(--line);background:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.chk svg{width:13px;height:13px;stroke:var(--acc);stroke-width:3;fill:none;opacity:0;stroke-linecap:round;stroke-linejoin:round}
+.task.done .chk{background:var(--acc);border-color:var(--acc)}
+.task.done .chk svg{opacity:1;stroke:#06111f}
+.task .tbody{flex:1;min-width:0}
+.task .txt{font-size:14.5px}
+.task .tmeta{color:var(--dim);font-size:11.5px;margin-top:2px}
+.task .op{display:flex;gap:2px}
+.taskrow-add{display:flex;gap:8px}
+.taskrow-add input[type=text]{flex:1}
+.taskrow-add input[type=date]{flex:0 0 150px}
 </style>
 </head>
 <body>
@@ -76,41 +118,72 @@ a{color:var(--acc)}
     <button class="gear" id="gearBtn" title="Sync nastavenia">⚙</button>
   </div>
 
-  <h1>Faktúry</h1>
-  <p class="sub">Opakujúce sa platby, s mailovým upozornením vopred.</p>
+  <h1>Faktúry a úlohy</h1>
+  <p class="sub">Faktúry pípnu mailom vopred. Úlohy sú len na tejto stránke.</p>
 
-  <div class="card">
-    <p class="section-title" id="formTitle">Nová faktúra</p>
-    <div class="field">
-      <label>Názov (napr. Elektrina, Nájom, Telefón)</label>
-      <input id="fName" placeholder="Názov platby">
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Deň v mesiaci (1–31)</label>
-        <input id="fDay" type="number" min="1" max="31" placeholder="12">
+  <div class="board">
+
+    <!-- ĽAVO: FAKTÚRY -->
+    <div>
+      <div class="card">
+        <p class="section-title" id="formTitle">Nová faktúra</p>
+        <div class="typebar">
+          <button class="typebtn on" data-type="sukromne">Súkromná</button>
+          <button class="typebtn" data-type="firma">Firemná</button>
+        </div>
+        <div class="field">
+          <label>Názov (napr. Elektrina, Nájom)</label>
+          <input id="fName" placeholder="Názov platby">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Deň v mesiaci</label>
+            <input id="fDay" type="number" min="1" max="31" placeholder="12">
+          </div>
+          <div class="field">
+            <label>Upozorniť koľko dní vopred</label>
+            <input id="fBefore" type="number" min="0" max="27" placeholder="2">
+          </div>
+        </div>
+        <div class="field">
+          <label>Poznámka (voliteľné — suma...)</label>
+          <textarea id="fNote" placeholder="napr. cca 45 €"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn" id="fSave">Uložiť</button>
+          <button class="btn ghost" id="fCancel" style="display:none">Zrušiť úpravu</button>
+        </div>
       </div>
-      <div class="field">
-        <label>Upozorniť koľko dní vopred</label>
-        <input id="fBefore" type="number" min="0" max="27" placeholder="2">
+
+      <div class="card">
+        <p class="section-title">Zoznam faktúr</p>
+        <div class="filterbar">
+          <span class="chip on" data-f="all">Všetky</span>
+          <span class="chip" data-f="sukromne">Súkromné</span>
+          <span class="chip" data-f="firma">Firemné</span>
+        </div>
+        <div id="billList"></div>
+      </div>
+      <p class="hint">Maily posiela raz denne GitHub Action. Zmena sa prejaví do 24 hod.</p>
+    </div>
+
+    <!-- VPRAVO: ÚLOHY -->
+    <div>
+      <div class="card">
+        <p class="section-title">Nová úloha</p>
+        <div class="taskrow-add">
+          <input id="tText" type="text" placeholder="Čo treba spraviť…">
+          <input id="tDate" type="date">
+          <button class="btn" id="tSave">Pridať</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="section-title">Úlohy</p>
+        <div id="taskList"></div>
       </div>
     </div>
-    <div class="field">
-      <label>Poznámka (voliteľné — suma, číslo účtu...)</label>
-      <textarea id="fNote" placeholder="napr. cca 45 €"></textarea>
-    </div>
-    <div class="actions">
-      <button class="btn" id="fSave">Uložiť</button>
-      <button class="btn ghost" id="fCancel" style="display:none">Zrušiť úpravu</button>
-    </div>
-  </div>
 
-  <div class="card">
-    <p class="section-title">Zoznam</p>
-    <div id="list"></div>
   </div>
-
-  <p class="hint">Maily posiela raz denne GitHub Action podľa tohto zoznamu. Zmena sa prejaví do 24 hod.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -119,7 +192,7 @@ a{color:var(--acc)}
 <div class="overlay" id="onb">
   <div class="modal">
     <h2 id="onbTitle">Pripoj sync</h2>
-    <p id="onbLead">Vlož token a odteraz sa zoznam faktúr sám prenáša medzi zariadeniami — a GitHub Action z neho vie posielať maily.</p>
+    <p id="onbLead">Vlož token a odteraz sa dáta sami prenášajú medzi zariadeniami — a GitHub Action z faktúr vie posielať maily.</p>
     <ol>
       <li>github.com → <b>Settings</b> → dole <b>Developer settings</b></li>
       <li><b>Personal access tokens → Tokens (classic)</b> → Generate new token</li>
@@ -157,8 +230,8 @@ a{color:var(--acc)}
 
 <script>
 const KEY='faktury_v1';
-const DEFAULTS={ v:1, updatedAt:0, bills:[], sync:{gistId:'',token:'',skipped:false} };
-let D=load(), editingId=null;
+const DEFAULTS={ v:2, updatedAt:0, bills:[], tasks:[], sync:{gistId:'',token:'',skipped:false} };
+let D=load(), editingId=null, curType='sukromne', billFilter='all';
 
 function load(){
   try{ const raw=localStorage.getItem(KEY); if(!raw) return structuredClone(DEFAULTS);
@@ -173,18 +246,22 @@ const $=s=>document.querySelector(s);
 const esc=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let tT;
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('on'),1700); }
+function dniSlovo(n){ n=+n; if(n===1) return 'deň'; if(n>=2&&n<=4) return 'dni'; return 'dní'; }
 
-/* ---------- render ---------- */
-function render(){
-  const list=$('#list');
-  const bills=[...D.bills].sort((a,b)=>a.day-b.day);
-  if(!bills.length){ list.innerHTML='<div class="empty">Zatiaľ žiadna faktúra. Pridaj prvú vyššie ↑</div>'; return; }
+/* ============================================================
+   FAKTÚRY
+   ============================================================ */
+function renderBills(){
+  const list=$('#billList');
+  let bills=[...D.bills].sort((a,b)=>a.day-b.day);
+  if(billFilter!=='all') bills=bills.filter(b=>(b.type||'sukromne')===billFilter);
+  if(!bills.length){ list.innerHTML='<div class="empty">Nič tu zatiaľ nie je.</div>'; return; }
   list.innerHTML=bills.map(b=>`
-    <div class="bill" data-id="${b.id}">
+    <div class="bill" data-id="${b.id}" data-type="${b.type||'sukromne'}">
       <div class="day">${b.day}.</div>
       <div class="info">
         <div class="name">${esc(b.name)}</div>
-        <div class="meta">upozornenie ${b.before} ${dniSlovo(b.before)} vopred${b.note?' · '+esc(b.note):''}</div>
+        <div class="meta">${b.before} ${dniSlovo(b.before)} vopred${b.note?' · '+esc(b.note):''}</div>
       </div>
       <div class="op">
         <button class="iconbtn" data-act="edit" title="Upraviť">✎</button>
@@ -192,19 +269,34 @@ function render(){
       </div>
     </div>`).join('');
 }
-function dniSlovo(n){ n=+n; if(n===1) return 'deň'; if(n>=2&&n<=4) return 'dni'; return 'dní'; }
 
-$('#list').addEventListener('click',e=>{
+document.querySelectorAll('.typebtn').forEach(b=>{
+  b.onclick=()=>{
+    curType=b.dataset.type;
+    document.querySelectorAll('.typebtn').forEach(x=>x.classList.toggle('on',x===b));
+  };
+});
+document.querySelectorAll('.chip').forEach(c=>{
+  c.onclick=()=>{
+    billFilter=c.dataset.f;
+    document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
+    renderBills();
+  };
+});
+
+$('#billList').addEventListener('click',e=>{
   const row=e.target.closest('.bill'); if(!row) return;
   const id=row.dataset.id, act=e.target.dataset.act;
   if(act==='del'){
     if(!confirm('Zmazať túto faktúru?')) return;
-    D.bills=D.bills.filter(b=>b.id!==id); save(); render();
+    D.bills=D.bills.filter(b=>b.id!==id); save(); renderBills();
   }
   if(act==='edit'){
     const b=D.bills.find(x=>x.id===id); if(!b) return;
     editingId=id;
     $('#fName').value=b.name; $('#fDay').value=b.day; $('#fBefore').value=b.before; $('#fNote').value=b.note||'';
+    curType=b.type||'sukromne';
+    document.querySelectorAll('.typebtn').forEach(x=>x.classList.toggle('on',x.dataset.type===curType));
     $('#formTitle').textContent='Upraviť faktúru';
     $('#fCancel').style.display='inline-block';
     window.scrollTo({top:0,behavior:'smooth'});
@@ -214,6 +306,8 @@ $('#list').addEventListener('click',e=>{
 $('#fCancel').onclick=()=>{
   editingId=null;
   $('#fName').value=''; $('#fDay').value=''; $('#fBefore').value=''; $('#fNote').value='';
+  curType='sukromne';
+  document.querySelectorAll('.typebtn').forEach(x=>x.classList.toggle('on',x.dataset.type==='sukromne'));
   $('#formTitle').textContent='Nová faktúra';
   $('#fCancel').style.display='none';
 };
@@ -228,13 +322,54 @@ $('#fSave').onclick=()=>{
   if(!(before>=0&&before<=27)){ toast('Upozornenie 0–27 dní'); return; }
   if(editingId){
     const b=D.bills.find(x=>x.id===editingId);
-    Object.assign(b,{name,day,before,note});
+    Object.assign(b,{name,day,before,note,type:curType});
   }else{
-    D.bills.push({id:uid(),name,day,before,note});
+    D.bills.push({id:uid(),name,day,before,note,type:curType});
   }
-  save(); render(); $('#fCancel').onclick();
+  save(); renderBills(); $('#fCancel').onclick();
   toast('Uložené');
 };
+
+/* ============================================================
+   ÚLOHY
+   ============================================================ */
+function renderTasks(){
+  const list=$('#taskList');
+  const tasks=[...D.tasks].sort((a,b)=>{
+    if(!!a.done!==!!b.done) return a.done?1:-1;
+    return (a.date||'9999').localeCompare(b.date||'9999') || a.created-b.created;
+  });
+  if(!tasks.length){ list.innerHTML='<div class="empty">Zatiaľ žiadna úloha.</div>'; return; }
+  list.innerHTML=tasks.map(t=>`
+    <div class="task${t.done?' done':''}" data-id="${t.id}">
+      <button class="chk" data-act="toggle"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></button>
+      <div class="tbody">
+        <div class="txt">${esc(t.text)}</div>
+        ${t.date?`<div class="tmeta">${fmtDate(t.date)}</div>`:''}
+      </div>
+      <div class="op"><button class="iconbtn" data-act="del" title="Zmazať">✕</button></div>
+    </div>`).join('');
+}
+function fmtDate(iso){
+  const [y,m,d]=iso.split('-').map(Number);
+  return d+'.'+m+'.'+y;
+}
+$('#taskList').addEventListener('click',e=>{
+  const row=e.target.closest('.task'); if(!row) return;
+  const id=row.dataset.id, act=e.target.closest('[data-act]')?.dataset.act;
+  if(act==='toggle'){ const t=D.tasks.find(x=>x.id===id); if(t){ t.done=!t.done; save(); renderTasks(); } }
+  if(act==='del'){ D.tasks=D.tasks.filter(x=>x.id!==id); save(); renderTasks(); }
+});
+function addTask(){
+  const text=$('#tText').value.trim();
+  const date=$('#tDate').value||null;
+  if(!text){ toast('Napíš úlohu'); return; }
+  D.tasks.push({id:uid(),text,date,done:false,created:Date.now()});
+  $('#tText').value=''; $('#tDate').value='';
+  save(); renderTasks();
+}
+$('#tSave').onclick=addTask;
+$('#tText').addEventListener('keydown',e=>{ if(e.key==='Enter') addTask(); });
 
 /* ============================================================
    GIST SYNC — rovnaký princíp ako v HQ, súbor faktury.json
@@ -270,7 +405,7 @@ async function push(loud=false){
   syncing=true; dot('busy'); syncTxt('sync…');
   try{
     const {sync:_x, ...naGist}=D;
-    const body={description:'Faktúry data',files:{'faktury.json':{content:JSON.stringify(naGist)}}};
+    const body={description:'Faktury a ulohy data',files:{'faktury.json':{content:JSON.stringify(naGist)}}};
     let r;
     await ensureGist();
     if(D.sync.gistId) r=await api('https://api.github.com/gists/'+D.sync.gistId,{method:'PATCH',body:JSON.stringify(body)});
@@ -303,8 +438,8 @@ async function pull(loud=false,force=false){
     if(force || (rem.updatedAt||0)>(D.updatedAt||0)){
       const s=D.sync;
       D=Object.assign(structuredClone(DEFAULTS),rem);
-      D.sync=s; saveLocal(); render();
-      if(loud){ toast('Stiahnuté ↓'); stat('Stiahnuté o '+cas()+' — '+D.bills.length+' faktúr.'); }
+      D.sync=s; saveLocal(); renderBills(); renderTasks();
+      if(loud){ toast('Stiahnuté ↓'); stat('Stiahnuté o '+cas()+' — '+D.bills.length+' faktúr, '+D.tasks.length+' úloh.'); }
     }else if(loud){ toast('Už máš najnovšie'); stat('Bez zmeny.'); }
     dot('ok'); syncTxt('sync ✓ '+cas());
   }catch(e){
@@ -360,7 +495,7 @@ $('#onbGo').onclick=async()=>{
     D.sync.token=t; D.sync.skipped=false;
     localStorage.setItem('gh_token_faktury',t); saveLocal();
     const hit=(await r.json()).find(g=>g.files&&g.files['faktury.json']);
-    if(hit){ D.sync.gistId=hit.id; saveLocal(); await pull(false,true); say('Pripojené — stiahnutých '+D.bills.length+' faktúr.','ok'); }
+    if(hit){ D.sync.gistId=hit.id; saveLocal(); await pull(false,true); say('Pripojené — stiahnutých '+D.bills.length+' faktúr, '+D.tasks.length+' úloh.','ok'); }
     else{ await push(false); say('Pripojené — úložisko vytvorené.','ok'); }
     setTimeout(onbHide,900);
   }catch(e){ say('Nepodarilo sa spojiť s GitHubom: '+e.message,'err'); b.disabled=false; }
@@ -372,7 +507,7 @@ function tokenNeplatny(){
 }
 
 /* ---------- štart ---------- */
-render();
+renderBills(); renderTasks();
 if(D.sync.token){ pull(); }
 else if(!D.sync.skipped){ onbShow(); }
 </script>

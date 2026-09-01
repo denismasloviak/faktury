@@ -108,15 +108,17 @@ async function sendMail(subject, text) {
     return;
   }
 
+  const typeLabel = b => b.type === 'firma' ? '[Firemné] ' : '[Súkromné] ';
+
   const lines = [];
   if (dueToday.length) {
     lines.push('Dnes treba zaplatiť:');
-    for (const b of dueToday) lines.push('• ' + b.name + (b.note ? ' — ' + b.note : ''));
+    for (const b of dueToday) lines.push('• ' + typeLabel(b) + b.name + (b.note ? ' — ' + b.note : ''));
     lines.push('');
   }
   if (remindToday.length) {
     lines.push('Blíži sa splatnosť:');
-    for (const b of remindToday) lines.push('• ' + b.name + ' — splatné ' + b.dueS + (b.note ? ' (' + b.note + ')' : ''));
+    for (const b of remindToday) lines.push('• ' + typeLabel(b) + b.name + ' — splatné ' + b.dueS + (b.note ? ' (' + b.note + ')' : ''));
   }
 
   const subject = dueToday.length

@@ -1,18 +1,18 @@
-# Faktúry — pripomienky opakujúcich sa platieb mailom
+# Faktúry a úlohy — pripomienky opakujúcich sa platieb mailom
 
-Jedna stránka na pridávanie faktúr (deň v mesiaci + koľko dní vopred upozorniť),
-dáta sync-nuté cez privátny GitHub Gist (rovnaký princíp ako HQ). Raz denne beží
-GitHub Action, ktorá zoznam skontroluje a pošle mail cez Resend, ak dnes vychádza
-upozornenie alebo je deň splatnosti.
+Stránka na pridávanie faktúr (firemné/súkromné, deň v mesiaci + koľko dní vopred
+upozorniť) a úloh, dáta sync-nuté cez privátny GitHub Gist (rovnaký princíp ako HQ).
+Raz denne beží GitHub Action, ktorá zoznam faktúr skontroluje a pošle mail cez
+Gmail (SMTP), ak dnes vychádza upozornenie alebo je deň splatnosti.
 
 ## Ako to funguje
 
-1. `index.html` — appka na pridávanie/úpravu faktúr, dáta v Gist-e (`faktury.json`).
+1. `index.html` — appka na pridávanie/úpravu faktúr a úloh, dáta v Gist-e (`faktury.json`).
 2. `.github/workflows/pripomienky.yml` — cron, beží denne o 6:00 UTC.
-3. `.github/scripts/check-and-notify.mjs` — prečíta Gist, spočíta dátumy, pošle mail cez Resend API.
+3. `.github/scripts/check-and-notify.mjs` — prečíta Gist, spočíta dátumy, pošle mail cez Gmail.
 
-Dáta faktúr (názvy, poznámky) **nie sú v repe** ani vo workflow súbore — sú len
-v privátnom Gist-e. Do repa/Actions ide len token na jeho čítanie (ako secret).
+Dáta (názvy faktúr, poznámky, úlohy) **nie sú v repe** ani vo workflow súbore —
+sú len v privátnom Gist-e. Do repa/Actions ide len token na jeho čítanie (ako secret).
 
 ## Nasadenie
 
@@ -38,31 +38,38 @@ Potom na GitHube:
    | Name | Hodnota |
    |---|---|
    | `GIST_TOKEN` | GitHub token so scope `gist` (rovnaký typ ako v appke — classic PAT, zaškrtnutý `gist`) |
-   | `RESEND_API_KEY` | API kľúč z resend.com |
+   | `GMAIL_USER` | tvoja gmailová adresa, z ktorej sa bude posielať (napr. `denismasloviak@gmail.com`) |
+   | `GMAIL_APP_PASSWORD` | App Password vygenerované v Google účte (postup nižšie) |
    | `TO_EMAIL` | mailová adresa, kam majú chodiť upozornenia |
-   | `FROM_EMAIL` | voliteľné, napr. `Faktury <onboarding@resend.dev>` — ak nezadáš, použije sa tento default |
 
 4. Otvor appku na Pages URL, vlož ten istý `GIST_TOKEN` do onboarding obrazovky,
    pridaj prvú faktúru. Appka si sama vytvorí Gist.
 5. Over cron ručne: **Actions → Pripomienky faktúr → Run workflow**, pozri log.
 
-## Dôležité — Resend a cudzí príjemca
+## Ako vygenerovať Gmail App Password
 
-Bez overenej vlastnej domény v Resend-e vie účet `onboarding@resend.dev` v niektorých
-prípadoch posielať len na mail, ktorým bol Resend účet založený — nie na ľubovoľnú
-cudziu adresu. Ak prvý test na `TO_EMAIL` nepríde:
+Bežné heslo do Gmailu na toto nepoužiješ — Google to blokuje. Treba samostatné
+"App Password" (funguje len ak máš na účte zapnuté dvojfaktorové overenie):
 
-1. Choď na resend.com → **Domains** → Add Domain (stačí doména, čo vlastníš).
-2. Pridaj 2–3 DNS záznamy, ktoré ti Resend ukáže (trvá pár minút, u niektorých
-   poskytovateľov aj pár hodín, kým sa DNS prejaví).
-3. Zmeň `FROM_EMAIL` secret na `Faktury <pripomienka@tvoja-domena.sk>`.
+1. Zapni 2-faktorové overenie (ak ešte nemáš): myaccount.google.com → **Security** →
+   **2-Step Verification**.
+2. Potom choď na **myaccount.google.com/apppasswords** (alebo Security → App passwords).
+3. Zadaj názov (napr. "faktury") → **Create**.
+4. Google ti ukáže 16-miestne heslo bez medzier (napr. `abcdwxyzabcdwxyz`) —
+   to skopíruj do `GMAIL_APP_PASSWORD` secretu. Zobrazí sa len raz.
+
+Toto heslo funguje len na posielanie mailu cez appky/skripty, nedá sa ním prihlásiť
+na gmail.com — bezpečnejšie ako dávať niekam skutočné heslo.
 
 ## Formát dát v Gist-e (`faktury.json`)
 
 ```json
 {
   "bills": [
-    { "id": "abc123", "name": "Elektrina", "day": 12, "before": 2, "note": "cca 45 €" }
+    { "id": "abc123", "name": "Elektrina", "day": 12, "before": 2, "note": "cca 45 €", "type": "sukromne" }
+  ],
+  "tasks": [
+    { "id": "xyz789", "text": "Zavolať dodávateľovi", "date": "2026-09-15", "done": false }
   ]
 }
 ```
@@ -70,4 +77,6 @@ cudziu adresu. Ak prvý test na `TO_EMAIL` nepríde:
 - `day` — deň v mesiaci splatnosti (1–31; ak mesiac nemá toľko dní, orezáva sa
   na jeho posledný deň, napr. 30. vo februári → 28./29.)
 - `before` — koľko dní pred splatnosťou príde upozornenie
+- `type` — `"firma"` alebo `"sukromne"`, len farebné rozlíšenie v appke a v maily
 - v deň splatnosti príde ešte samostatný mail "Dnes treba zaplatiť"
+- `tasks` sa mailom neposielajú, sú len v appke

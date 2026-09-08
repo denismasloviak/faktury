@@ -1,16 +1,19 @@
 // Beží raz denne cez GitHub Actions (pozri .github/workflows/pripomienky.yml).
 // Prečíta zoznam faktúr z privátneho Gistu (rovnaký, čo napĺňa index.html)
-// a pošle mail cez Resend, ak dnes vychádza upozornenie na niektorú faktúru.
+// a pošle mail cez Gmail (SMTP, App Password), ak dnes vychádza upozornenie.
+
+import nodemailer from 'nodemailer';
 
 const GIST_TOKEN = process.env.GIST_TOKEN;
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 const TO_EMAIL = process.env.TO_EMAIL;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Faktury <onboarding@resend.dev>';
 const TZ = 'Europe/Bratislava';
 
 function fail(msg) { console.error('CHYBA: ' + msg); process.exit(1); }
 if (!GIST_TOKEN) fail('chýba GIST_TOKEN secret');
-if (!RESEND_API_KEY) fail('chýba RESEND_API_KEY secret');
+if (!GMAIL_USER) fail('chýba GMAIL_USER secret');
+if (!GMAIL_APP_PASSWORD) fail('chýba GMAIL_APP_PASSWORD secret');
 if (!TO_EMAIL) fail('chýba TO_EMAIL secret');
 
 // -- dátum "dnes" v lokálnej časovej zóne, nie UTC (Actions bežia v UTC) --
@@ -69,14 +72,14 @@ function dueInstancesAround(y, m, day) {
 }
 
 async function sendMail(subject, text) {
-  const r = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM_EMAIL, to: [TO_EMAIL], subject, text })
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD }
   });
-  if (!r.ok) {
-    const body = await r.text().catch(() => '');
-    fail('Resend ' + r.status + ': ' + body);
+  try {
+    await transporter.sendMail({ from: GMAIL_USER, to: TO_EMAIL, subject, text });
+  } catch (e) {
+    fail('Gmail SMTP: ' + e.message);
   }
   console.log('Mail odoslaný: ' + subject);
 }
